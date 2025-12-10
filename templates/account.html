@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Мой аккаунт{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-title">
+        <h1>Мой аккаунт</h1>
+        <p>Управление профилем</p>
+    </div>
+
+    <div class="form-container" style="max-width: 600px;">
+        <div style="text-align: center; padding: 20px;">
+            {% if user %}
+            <div style="margin-bottom: 20px;">
+                {% if user.avatar_filename %}
+                    <img src="{{ url_for('static', filename='uploads/' + user.avatar_filename) }}" alt="avatar" style="width: 120px; height:120px; border-radius:50%; object-fit:cover;">
+                {% else %}
+                    <img src="{{ url_for('static', filename='icon_account.png') }}" alt="avatar" style="width: 120px; height:120px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+                {% endif %}
+            </div>
+
+            <h2 style="color: #fff; margin-bottom: 8px;">{{ user.username }}</h2>
+            <p style="color: #999; margin-bottom: 10px;">{{ user.email }}</p>
+
+            <div style="background: #1a1a1a; border-radius: 8px; padding: 20px; text-align: left; margin-bottom: 20px;">
+                <form action="{{ url_for('upload_avatar') }}" method="POST" enctype="multipart/form-data">
+                    <label style="color:#999; display:block; margin-bottom:8px;">Загрузить аватар</label>
+                    <input type="file" name="avatar" accept="image/*" style="margin-bottom:10px;">
+                    <div>
+                        <button class="btn btn-edit" type="submit">Загрузить</button>
+                    </div>
+                </form>
+            </div>
+
+                <div style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;">
+                <a href="{{ url_for('logout') }}" class="btn btn-delete">Выйти</a>
+                <a href="{{ url_for('edit_profile') }}" class="btn btn-edit">Редактировать профиль</a>
+                <a href="{{ url_for('home') }}" class="btn btn-view">На главную</a>
+                </div>
+
+                <!-- single delete button - opens modal with password + checkbox -->
+                <div style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;">
+                    <button id="open-delete-modal" class="btn btn-delete" type="button">Удалить аккаунт</button>
+                </div>
+
+                <!-- Modal (hidden by default) -->
+                <div id="deleteModal" class="modal" aria-hidden="true" style="display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center;">
+                    <div class="modal-backdrop" style="position:absolute; inset:0; background:rgba(0,0,0,0.6);"></div>
+                    <div class="modal-content" role="dialog" aria-modal="true" style="position:relative; width:100%; max-width:520px; background:#111; padding:20px; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.04); z-index:2001;">
+                        <h3 style="margin-top:0; color:#fff;">Подтвердить удаление аккаунта</h3>
+                        <p style="color:#bbb; margin-bottom:10px;">Введите пароль и подтвердите удаление, чтобы окончательно удалить ваш аккаунт и все табы.</p>
+                        <form id="deleteAccountForm" action="{{ url_for('delete_account') }}" method="POST" onsubmit="return handleDeleteSubmit(this);" style="display:flex; flex-direction:column; gap:10px;">
+                            <!-- disable browser autofill/paste via attributes and JS checks -->
+                            <input id="confirm_password" type="password" name="confirm_password" class="form-input" placeholder="Ваш пароль" required autocomplete="new-password" autocapitalize="off" spellcheck="false" onpaste="return false" ondrop="return false">
+                            <label style="color:#ddd; font-size:14px;"><input type="checkbox" name="confirm_deletion" value="1" style="margin-right:8px;"> Я понимаю — удалить мой аккаунт и все мои табы</label>
+                            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+                                <button type="button" id="cancel-delete" class="btn btn-view">Отмена</button>
+                                <button type="submit" class="btn btn-delete">Удалить аккаунт</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <script>
+                        // modal open/close logic
+                    (function(){
+                        const openBtn = document.getElementById('open-delete-modal');
+                        const modal = document.getElementById('deleteModal');
+                        const cancelBtn = document.getElementById('cancel-delete');
+                        const form = document.getElementById('deleteAccountForm');
+
+                        let manualTyped = false;
+
+                        function openModal(){
+                            modal.style.display = 'flex';
+                            modal.setAttribute('aria-hidden', 'false');
+                            // clear any autofill and require manual typing
+                            const pwd = form.querySelector('#confirm_password');
+                            if (pwd) {
+                                pwd.value = '';
+                                manualTyped = false;
+                                // focus and prevent clipboard operations
+                                pwd.focus();
+                            }
+                        }
+
+                        function closeModal(){
+                            modal.style.display = 'none';
+                            modal.setAttribute('aria-hidden', 'true');
+                            openBtn.focus();
+                        }
+
+                        openBtn.addEventListener('click', openModal);
+                        cancelBtn.addEventListener('click', closeModal);
+
+                        // close on backdrop click
+                        modal.addEventListener('click', function(e){
+                            if (e.target === modal || e.target.classList.contains('modal-backdrop')) closeModal();
+                        });
+
+                        // keyboard: ESC to close
+                        document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && modal.style.display === 'flex') closeModal(); });
+
+                        // prevent paste/drag/drop and require manual typing
+                        const pwdField = document.getElementById('confirm_password');
+                        if (pwdField) {
+                            // disable context menu on password field (removes quick paste option)
+                            pwdField.addEventListener('contextmenu', e => e.preventDefault());
+
+                            // block paste and drop explicitly
+                            pwdField.addEventListener('paste', e => { e.preventDefault(); });
+                            pwdField.addEventListener('drop', e => { e.preventDefault(); });
+
+                            // detect manual typing using beforeinput/input/keydown
+                            pwdField.addEventListener('beforeinput', e => {
+                                // inputType "insertText" indicates manual typing (not paste)
+                                if (e.inputType === 'insertText') manualTyped = true;
+                            });
+
+                            pwdField.addEventListener('input', e => {
+                                // fallback: if the input event is trusted and not a paste, treat as manual
+                                if (e.isTrusted && !e.dataTransfer && !e.data) {
+                                    manualTyped = true;
+                                }
+                            });
+
+                            // keyboard paste shortcuts
+                            pwdField.addEventListener('keydown', e => {
+                                const isPasteShortcut = (e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V');
+                                if (isPasteShortcut || e.key === 'Insert' && e.shiftKey) {
+                                    e.preventDefault();
+                                    return false;
+                                }
+                                // any normal printable key counts as manual typing
+                                if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) manualTyped = true;
+                            });
+                        }
+
+                        window.handleDeleteSubmit = function(formEl){
+                            const chk = formEl.querySelector('input[name="confirm_deletion"]');
+                            const pwd = formEl.querySelector('#confirm_password');
+                            if (!chk || !chk.checked) { alert('Пожалуйста, подтвердите удаление, установив галочку.'); return false; }
+                            if (!pwd || pwd.value.trim() === '') { alert('Введите пароль для подтверждения удаления.'); if(pwd) pwd.focus(); return false; }
+                            if (!manualTyped) { alert('Вставка пароля запрещена. Пожалуйста, введите пароль вручную.'); if(pwd) pwd.focus(); return false; }
+                            return confirm('Вы уверены? Это действие удалит ваш аккаунт и все ваши табы безвозвратно.');
+                        };
+                    })();
+                </script>
+            {% else %}
+            <div style="padding: 20px;">
+                <p style="color:#ddd;">Вы не вошли в систему.</p>
+                <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
+                    <a href="{{ url_for('login') }}" class="btn btn-edit">Войти</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-view">Регистрация</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if user %}
+        <div style="max-width: 900px; margin: 20px auto;">
+            <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                <h3 style="color:#E99FCF; margin:0;">Личный кабинет</h3>
+                <div style="color:#bbb; font-size:14px;">Всего табов: <strong style="color:#fff;">{{ user_tabs|length }}</strong></div>
+            </div>
+
+            <!-- tabs nav -->
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+                <button class="acct-tab-btn" data-target="my-tabs" style="padding:8px 12px; border-radius:6px; background:#1a1a1a; color:#fff; border:1px solid rgba(255,255,255,0.04);">Мои табы ({{ user_tabs|length }})</button>
+                <button class="acct-tab-btn" data-target="followers" style="padding:8px 12px; border-radius:6px; background:transparent; color:#ddd; border:1px solid rgba(255,255,255,0.04);">Подписчики ({{ followers|length }})</button>
+                <button class="acct-tab-btn" data-target="following" style="padding:8px 12px; border-radius:6px; background:transparent; color:#ddd; border:1px solid rgba(255,255,255,0.04);">Подписки ({{ following|length }})</button>
+            </div>
+
+            <div id="acct-tabs-container">
+                <!-- MY TABS -->
+                <div id="my-tabs" class="acct-pane">
+                    <div class="grid">
+                {% for tab in user_tabs %}
+                <div class="card">
+                    <div class="card-body">
+                        <h3>{{ tab.title }}</h3>
+                        <p style="color:#999;">{{ tab.artist }}</p>
+                    </div>
+                    <div class="card-actions">
+                        <a class="btn btn-view" href="{{ url_for('view_tab', id=tab.id) }}">View</a>
+                        <a class="btn btn-edit" href="{{ url_for('edit_tab', id=tab.id) }}">Edit</a>
+                        <form action="{{ url_for('delete_tab', id=tab.id) }}" method="POST" style="display:inline-block; margin-left:6px;">
+                            <button class="btn btn-delete" type="submit" onclick="return confirm('Удалить?')">Удалить</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+                    </div>
+                </div>
+
+                <!-- FOLLOWERS -->
+                <div id="followers" class="acct-pane" style="display:none;">
+                    <h4 style="color:#E99FCF; margin-top:0;">Подписчики — ({{ followers|length }})</h4>
+                    {% if followers %}
+                        <div class="grid">
+                            {% for u in followers %}
+                            <div class="card">
+                                <div class="card-body" style="display:flex; gap:10px; align-items:center;">
+                                    {% if u.avatar_filename %}
+                                        <img src="{{ url_for('static', filename='uploads/' + u.avatar_filename) }}" alt="avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover;">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='icon_account.png') }}" alt="avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover;">
+                                    {% endif %}
+                                    <div style="flex:1; text-align:left;">
+                                        <a href="{{ url_for('user_profile', user_id=u.id) }}" style="color:#fff; font-weight:600; text-decoration:none;">{{ u.username }}</a>
+                                        <div style="color:#999; font-size:13px;">Зарегистрирован: {{ u.created_at.strftime('%d.%m.%Y') if u.created_at else '—' }}</div>
+                                    </div>
+                                    <div class="card-actions">
+                                        {% if u.id in following_ids %}
+                                            <form action="{{ url_for('toggle_follow', user_id=u.id) }}" method="POST" style="display:inline-block;">
+                                                <button class="btn btn-delete" type="submit">Отписаться</button>
+                                            </form>
+                                        {% else %}
+                                            <form action="{{ url_for('toggle_follow', user_id=u.id) }}" method="POST" style="display:inline-block;">
+                                                <button class="btn btn-edit" type="submit">Подписаться</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="color:#bbb;">У вас пока нет подписчиков.</p>
+                    {% endif %}
+                </div>
+
+                <!-- FOLLOWING -->
+                <div id="following" class="acct-pane" style="display:none;">
+                    <h4 style="color:#E99FCF; margin-top:0;">Подписки — ({{ following|length }})</h4>
+                    {% if following %}
+                        <div class="grid">
+                            {% for u in following %}
+                            <div class="card">
+                                <div class="card-body" style="display:flex; gap:10px; align-items:center;">
+                                    {% if u.avatar_filename %}
+                                        <img src="{{ url_for('static', filename='uploads/' + u.avatar_filename) }}" alt="avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover;">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='icon_account.png') }}" alt="avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover;">
+                                    {% endif %}
+                                    <div style="flex:1; text-align:left;">
+                                        <a href="{{ url_for('user_profile', user_id=u.id) }}" style="color:#fff; font-weight:600; text-decoration:none;">{{ u.username }}</a>
+                                        <div style="color:#999; font-size:13px;">Зарегистрирован: {{ u.created_at.strftime('%d.%m.%Y') if u.created_at else '—' }}</div>
+                                    </div>
+                                    <div class="card-actions">
+                                        <form action="{{ url_for('toggle_follow', user_id=u.id) }}" method="POST" style="display:inline-block;">
+                                            <button class="btn btn-delete" type="submit">Отписаться</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="color:#bbb;">Вы ещё ни на кого не подписаны.</p>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+    (function(){
+        const buttons = document.querySelectorAll('.acct-tab-btn');
+        const panes = document.querySelectorAll('.acct-pane');
+
+        function setActive(targetId){
+            panes.forEach(p=> p.style.display = (p.id === targetId ? 'block' : 'none'));
+            buttons.forEach(b=>{
+                if (b.getAttribute('data-target') === targetId){
+                    b.style.background = '#1a1a1a'; b.style.color = '#fff';
+                } else { b.style.background = 'transparent'; b.style.color = '#ddd'; }
+            });
+        }
+
+        buttons.forEach(b => {
+            b.addEventListener('click', e => {
+                const t = b.getAttribute('data-target');
+                setActive(t);
+            });
+        });
+
+        // default to my-tabs
+        if (buttons.length) setActive('my-tabs');
+    })();
+</script>
+{% endblock %}

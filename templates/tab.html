@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tab.title }} - {{ tab.artist }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="tab-content">
+        <div class="tab-header">
+            <h1 class="tab-title">{{ tab.title }}</h1>
+            <h2 class="tab-artist">By:
+                {% if tab.user %}
+                    <a href="{{ url_for('user_profile', user_id=tab.user.id) }}" style="display:inline-flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
+                        {% if tab.user.avatar_filename %}
+                            <img src="{{ url_for('static', filename='uploads/' + tab.user.avatar_filename) }}" alt="avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.04);">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='icon_account.png') }}" alt="avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.04);">
+                        {% endif %}
+                        <span style="font-weight:600; margin-left:4px;">{{ tab.user.username }}</span>
+                    </a>
+                {% else %}
+                    {{ tab.artist }}
+                {% endif %}
+            </h2>
+            
+            <div class="tab-meta">
+                <div>
+                    <strong>Сложность:</strong>
+                    {# render difficulty from DB as up to 5 stars #}
+                    {% set d = tab.difficulty if tab.difficulty is not none else 3 %}
+                    {% for i in range(1,6) %}
+                        {% if i <= d %}
+                            <span style="color:#FFD700;">★</span>
+                        {% else %}
+                            <span style="color:#444;">★</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div>
+                    <strong>Длина:</strong> <span class="length-badge {{ length_class }}">{{ length_label }}</span>
+                </div>
+                <div>
+                    <strong>Скорость:</strong> {{ tab.speed_bpm if tab.speed_bpm is not none else 120 }} BPM
+                </div>
+                <div>
+                    <strong>Добавлен:</strong> {{ tab.created_at.strftime('%d.%m.%Y') if tab.created_at else 'Неизвестно' }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- ТАБУЛАТУРА (Songsterr-style pre) -->
+        <div style="overflow-x: auto; margin: 30px 0;">
+            {# Extract the tab block (before first blank line) and render as-is inside pre #}
+            {% set parts = tab.content.replace('\r\n','\n').split('\n\n') %}
+            {% set tab_block = parts[0] if parts|length > 0 else tab.content %}
+            <div class="tab-container">
+                <pre>{{ tab_block }}</pre>
+            </div>
+        </div>
+
+        {# Description feature removed — tabs are now just the tab block (no separate description) #}
+    </div>
+    
+    <div class="song-actions" style="justify-content: center; gap: 15px;">
+        {% if current_user and tab.user_id and current_user.id == tab.user_id %}
+        <a href="{{ url_for('edit_tab', id=tab.id) }}" class="btn btn-edit" style="width: 150px;">
+            <i class="fas fa-edit"></i> Редактировать
+        </a>
+        <form id="delete-form-{{ tab.id }}" action="{{ url_for('delete_tab', id=tab.id) }}" method="POST" style="display: inline;">
+            <button type="button" class="btn btn-delete" onclick="if(confirm('Удалить?')) { document.getElementById('delete-form-{{ tab.id }}').submit(); }" style="width: 150px;">
+                <i class="fas fa-trash"></i> Удалить
+            </button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('home') }}" class="btn btn-view" style="width: 150px;">
+            <i class="fas fa-arrow-left"></i> Назад
+        </a>
+        <!-- Export-to-HTML removed -->
+    </div>
+</div>
+{% endblock %}

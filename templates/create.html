@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить новый таб{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-title">
+        <h1>➕ Добавить новый таб</h1>
+        <p>Создай табулатуру для гитары</p>
+    </div>
+    
+    <div class="form-container">
+        <form method="POST" action="{{ url_for('create_tab') }}">
+            <div class="form-group">
+                <label class="form-label">Название песни</label>
+                <input type="text" name="title" class="form-input" placeholder="Master of Puppets" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Исполнитель</label>
+                <input type="text" name="artist" class="form-input" placeholder="Metallica" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                <!-- РЕДАКТОР (снизу предпросмотр) -->
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Редактор табулатуры (строки)</label>
+                        <div style="background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 4px; padding: 15px; font-family: 'Courier New', monospace; color: #ddd;">
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">e:</span>
+                                <textarea name="string_e" class="form-input tab-string-input" placeholder="|---------|---------|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">|---------|---------|---------|---------|</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">B:</span>
+                                <textarea name="string_b" class="form-input tab-string-input" placeholder="|---------|---------|---------|---------|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">|---------|---------|---------|---------|</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">G:</span>
+                                <textarea name="string_g" class="form-input tab-string-input" placeholder="|---------|---------|---------|---------|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">|---------|---------|---------|---------|</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">D:</span>
+                                <textarea name="string_d" class="form-input tab-string-input" placeholder="|-3-3-|-3-3-|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">A:</span>
+                                <textarea name="string_a" class="form-input tab-string-input" placeholder="|-3-3-|-3-3-|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|</textarea>
+                            </div>
+                            <div style="margin-bottom: 0;">
+                                <span style="color: #E99FCF; font-weight: 600;">E:</span>
+                                <textarea name="string_E" class="form-input tab-string-input" placeholder="|-1-1-|-1-1-|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">|-1-1-1-1-|-1-1-1-1-|-1-1-1-1-|-1-1-1-1-|</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Скорость песни (BPM)</label>
+                        <input type="number" name="speed_bpm" class="form-input" min="30" max="300" value="120">
+                        <small style="color:#999; display:block; margin-top:6px;">Укажите скорость в ударах в минуту (BPM). Оставьте по умолчанию — 120.</small>
+                    </div>
+                </div>
+
+                <!-- Нижняя область — предпросмотр -->
+                <div>
+                    <label class="form-label" style="display: block; margin-bottom: 12px;">📺 Предпросмотр табулатуры (снизу)</label>
+                    <div style="background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 4px; padding: 15px; overflow-x: auto;">
+                        <div class="tab-container">
+                            <pre id="preview_block">e |---------|---------|---------|---------|
+B |---------|---------|---------|---------|
+G |---------|---------|---------|---------|
+D |-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|
+A |-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|
+E |-1-1-1-1-|-1-1-1-1-|-1-1-1-1-|-1-1-1-1-|</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 30px;">
+                <button type="submit" class="btn" style="background: #E99FCF; color: #1a1a1a; flex: 1; font-weight: 600;">
+                    <i class="fas fa-save"></i> Сохранить таб
+                </button>
+                <a href="{{ url_for('home') }}" class="btn btn-view" style="flex: 1; text-align: center;">
+                    <i class="fas fa-times"></i> Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Обновление предпросмотра в реальном времени
+    const strings = ['e', 'b', 'g', 'd', 'a', 'E'];
+    function buildPreview() {
+        const lines = strings.map(s => {
+            const el = document.querySelector(`[name="string_${s}"]`);
+            const val = el && el.value ? el.value : `|---------|---------|---------|---------|`;
+            const label = s === 'E' ? 'E' : s; // preserve letter case
+            return `${label} ${val}`;
+        });
+        document.getElementById('preview_block').textContent = lines.join('\n');
+    }
+
+    strings.forEach(str => {
+        const input = document.querySelector(`[name="string_${str}"]`);
+        if (input) {
+            input.addEventListener('input', buildPreview);
+        }
+    });
+    // initialize
+    buildPreview();
+</script>
+{% endblock %}

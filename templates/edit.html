@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать таб - {{ tab.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-title">
+        <h1>✏️ Редактировать таб</h1>
+        <p>{{ tab.title }} - {{ tab.artist }}</p>
+    </div>
+    
+    <div class="form-container">
+        <form method="POST" action="{{ url_for('edit_tab', id=tab.id) }}">
+            <div class="form-group">
+                <label class="form-label">Название песни</label>
+                <input type="text" name="title" class="form-input" value="{{ tab.title }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Исполнитель</label>
+                <input type="text" name="artist" class="form-input" value="{{ tab.artist }}" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                <!-- ЛЕВАЯ КОЛОНКА - РЕДАКТОР -->
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Редактор табулатуры (строки)</label>
+                        <div style="background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 4px; padding: 15px; font-family: 'Courier New', monospace; color: #ddd;">
+                            {% set tab_lines = tab.content.split('\n') %}
+                            {% set string_values = {} %}
+                            {% for line in tab_lines %}
+                                {% if line.startswith('e ') %}
+                                    {% set _ = string_values.update({'e': line[2:]}) %}
+                                {% elif line.startswith('B ') %}
+                                    {% set _ = string_values.update({'b': line[2:]}) %}
+                                {% elif line.startswith('G ') %}
+                                    {% set _ = string_values.update({'g': line[2:]}) %}
+                                {% elif line.startswith('D ') %}
+                                    {% set _ = string_values.update({'d': line[2:]}) %}
+                                {% elif line.startswith('A ') %}
+                                    {% set _ = string_values.update({'a': line[2:]}) %}
+                                {% elif line.startswith('E ') %}
+                                    {% set _ = string_values.update({'E': line[2:]}) %}
+                                {% endif %}
+                            {% endfor %}
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">e:</span>
+                                <textarea name="string_e" class="form-input tab-string-input" placeholder="|---------|---------|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">{{ string_values.get('e', '') }}</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">B:</span>
+                                <textarea name="string_b" class="form-input tab-string-input" placeholder="|---------|---------|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">{{ string_values.get('b', '') }}</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">G:</span>
+                                <textarea name="string_g" class="form-input tab-string-input" placeholder="|---------|---------|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">{{ string_values.get('g', '') }}</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">D:</span>
+                                <textarea name="string_d" class="form-input tab-string-input" placeholder="|-3-3-|-3-3-|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">{{ string_values.get('d', '') }}</textarea>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: #E99FCF; font-weight: 600;">A:</span>
+                                <textarea name="string_a" class="form-input tab-string-input" placeholder="|-3-3-|-3-3-|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">{{ string_values.get('a', '') }}</textarea>
+                            </div>
+                            <div style="margin-bottom: 0;">
+                                <span style="color: #E99FCF; font-weight: 600;">E:</span>
+                                <textarea name="string_E" class="form-input tab-string-input" placeholder="|-1-1-|-1-1-|" style="width: calc(100% - 40px); margin-left: 5px; display: inline-block;">{{ string_values.get('E', '') }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Скорость песни (BPM)</label>
+                        <input type="number" name="speed_bpm" class="form-input" min="30" max="300" value="{{ tab.speed_bpm if tab.speed_bpm is not none else 120 }}">
+                        <small style="color:#999; display:block; margin-top:6px;">Скорость трека в BPM (удары в минуту).</small>
+                    </div>
+                </div>
+
+                <!-- Нижняя область — предпросмотр -->
+                <div>
+                    <label class="form-label" style="display: block; margin-bottom: 12px;">📺 Предпросмотр табулатуры (снизу)</label>
+                    <div style="background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 4px; padding: 15px; overflow-x: auto;">
+                        <div class="tab-container">
+                            <pre id="preview_block">{{ (
+                                'e ' + (string_values.get('e','') or '|---------|---------|---------|---------|') + '\n' +
+                                'B ' + (string_values.get('b','') or '|---------|---------|---------|---------|') + '\n' +
+                                'G ' + (string_values.get('g','') or '|---------|---------|---------|---------|') + '\n' +
+                                'D ' + (string_values.get('d','') or '|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|') + '\n' +
+                                'A ' + (string_values.get('a','') or '|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|') + '\n' +
+                                'E ' + (string_values.get('E','') or '|-1-1-1-1-|-1-1-1-1-|-1-1-1-1-|-1-1-1-1-|')
+                            ) }}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 30px;">
+                <button type="submit" class="btn" style="background: #E99FCF; color: #1a1a1a; flex: 1; font-weight: 600;">
+                    <i class="fas fa-save"></i> Сохранить изменения
+                </button>
+                <a href="{{ url_for('view_tab', id=tab.id) }}" class="btn btn-view" style="flex: 1; text-align: center;">
+                    <i class="fas fa-times"></i> Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Просто обновляем предпросмотр при изменении инпутов
+    const inputFields = ['e', 'b', 'g', 'd', 'a', 'E'];
+    
+    function buildPreview() {
+        const lines = inputFields.map(s => {
+            const input = document.querySelector(`[name="string_${s}"]`);
+            const val = input && input.value ? input.value : (s=='d' || s=='a' ? '|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|-3-3-3-3-|' : '|---------|---------|---------|---------|');
+            return `${s} ${val}`;
+        });
+        const preview = document.getElementById('preview_block');
+        if (preview) preview.textContent = lines.join('\n');
+    }
+
+    inputFields.forEach(str => {
+        const input = document.querySelector(`[name="string_${str}"]`);
+        if (input) input.addEventListener('input', buildPreview);
+    });
+
+    // initialize preview
+    buildPreview();
+</script>
+{% endblock %}

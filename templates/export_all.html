@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Экспорт всех табов{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Экспорт всех табов</h1>
+    <p>Преобразованные табулатуры в формате Songsterr-style</p>
+  </div>
+
+  <div style="text-align:center;margin-bottom:18px;">
+    <!-- HTML export downloads removed -->
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:18px;">
+    {% for tab in tabs %}
+      <div class="export-card">
+        <div class="export-meta">
+          <strong>{{ tab.title }}</strong> — {{ tab.artist }}
+          {% set d = tab.difficulty if tab.difficulty is not none else 3 %}
+          <small style="color:#FFD700; margin-left:8px;">{% for i in range(1,6) %}{% if i <= d %}★{% else %}☆{% endif %}{% endfor %}</small>
+          {% if tab.user %}<span style="color:#FFD700;">(by {{ tab.user.username }})</span>{% endif %}
+        </div>
+        <div class="tab-container">
+          {# Only render the initial tab block (before any blank line) — description feature removed #}
+          {% set parts = tab.content.replace('\r\n','\n').split('\n\n') %}
+          {% set tab_block = parts[0] if parts|length > 0 else tab.content %}
+          <pre>{{ tab_block | highlight_tab }}</pre>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:8px;">
+            <!-- Per-tab HTML exports removed -->
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

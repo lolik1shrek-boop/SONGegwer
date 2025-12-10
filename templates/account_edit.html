@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование профиля{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-title">
+        <h1>Редактирование профиля</h1>
+        <p>Измените данные аккаунта</p>
+    </div>
+
+    <div class="form-container" style="max-width: 480px; margin: 20px auto;">
+        <form method="POST" action="{{ url_for('edit_profile') }}">
+            <div class="form-group">
+                <label class="form-label">Имя пользователя</label>
+                <input type="text" name="username" class="form-input" value="{{ user.username }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-input" value="{{ user.email }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Новый пароль (оставьте пустым чтобы не менять)</label>
+                <input type="password" name="password" class="form-input" placeholder="Новый пароль">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-edit" type="submit">Сохранить</button>
+                <a href="{{ url_for('account') }}" class="btn btn-view">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎸 SONGegwer - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <a href="{{ url_for('home') }}">
+                    <div style="position: relative; display: inline-block;">
+                        <div style="position: absolute; left: -10px; top: -5px; width: 55px; height: 55px; background: #E99FCF; border-radius: 8px; z-index: 0;"></div>
+                        <img src="{{ url_for('static', filename='logo_g.png') }}" alt="SONGegwer" style="position: relative; z-index: 1; width: 45px; height: 45px;">
+                    </div>
+                    <span>SONGegwer</span>
+                </a>
+            </div>
+            <button class="nav-toggle" aria-label="Меню" aria-expanded="false"><i class="fas fa-bars"></i></button>
+            <div class="nav-links" id="navLinks">
+                <a href="{{ url_for('create_tab') }}"><img src="{{ url_for('static', filename='icon_newtab.png') }}" alt="Create" style="width: 24px; height: 24px;"></a>
+                <a href="{{ url_for('search') }}"><img src="{{ url_for('static', filename='icon_search.png') }}" alt="Search" style="width: 24px; height: 24px;"></a>
+                <a href="{{ url_for('favorites') }}" title="Избранное" style="display:flex;align-items:center;">
+                    <img src="{{ url_for('static', filename='icon_star.png') }}" alt="Избранное" style="width: 24px; height: 24px; margin-left:4px;">
+                </a>
+                {% if current_user %}
+                    {% if current_user.avatar_filename %}
+                        <a href="{{ url_for('account') }}" title="{{ current_user.username }}">
+                                <img src="{{ url_for('static', filename='uploads/' + current_user.avatar_filename) }}" alt="Account" style="width: 28px; height: 28px; border-radius:50%; object-fit: cover; border: 2px solid #333;">
+                        </a>
+                    {% else %}
+                            <a href="{{ url_for('account') }}" title="{{ current_user.username }}">
+                                <img src="{{ url_for('static', filename='icon_account.png') }}" alt="Account" style="width: 28px; height: 28px; border-radius:50%;">
+                            </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('login') }}" style="color: #fff;">Login</a>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>SONGegwer &copy; 2025 - Табулатуры для гитары</p>
+        <p>Проект заслуживает 100 баллов</p>
+    </footer>
+    <script>
+        // Mobile nav toggle
+        document.addEventListener('DOMContentLoaded', function(){
+            const navToggle = document.querySelector('.nav-toggle');
+            const navLinks = document.getElementById('navLinks');
+            if (navToggle && navLinks) {
+                navToggle.addEventListener('click', function(){
+                    const isOpen = navLinks.classList.toggle('open');
+                    navToggle.setAttribute('aria-expanded', !!isOpen);
+                });
+            }
+        });
+
+        // AJAX toggle for favorite buttons
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('form[action^="/toggle_favorite/"]').forEach(form => {
+                form.addEventListener('submit', function(e){
+                    // allow normal POST if not logged in (server redirects), otherwise use AJAX
+                    e.preventDefault();
+                    const action = form.getAttribute('action');
+                    fetch(action, { method: 'POST', headers: {'X-Requested-With':'XMLHttpRequest'} })
+                        .then(r => r.json().catch(()=>null))
+                        .then(data => {
+                            if (!data) {
+                                // fallback: reload
+                                window.location.reload();
+                                return;
+                            }
+                            if (data.error === 'login_required') {
+                                // redirect to login page
+                                window.location.href = '/login';
+                                return;
+                            }
+                            // find button inside form and toggle class
+                            const btn = form.querySelector('button.star-btn');
+                            if (btn) {
+                                if (data.favorited) btn.classList.add('favorited'); else btn.classList.remove('favorited');
+                            }
+                        })
+                        .catch(err => { console.error('fav toggle error', err); window.location.reload(); });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

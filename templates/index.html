@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - Все табы{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-title">
+        <h1>SONGegwer</h1>
+        <p>By: Gegwer</p>
+    </div>
+
+    {% if current_user and current_user_fav_ids and current_user_fav_ids|length > 0 %}
+    <div class="fav-panel">
+        <h3>Ваши избранные</h3>
+        <div class="fav-list">
+            {% for fav in current_user_favs_preview %}
+                <a class="fav-chip" href="{{ url_for('view_tab', id=fav.id) }}">{{ fav.title }} — {{ fav.artist }}</a>
+            {% endfor %}
+            <a class="fav-chip" href="{{ url_for('favorites') }}">Открыть все избранные →</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Форма поиска -->
+    <div class="search-section">
+        <form action="{{ url_for('search') }}" method="GET" class="search-box">
+            <input type="text" name="query" class="search-input" placeholder="Type song name..." value="">
+            <button type="submit" class="search-btn">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </form>
+    </div>
+
+    <!-- Сетка песен -->
+    <div class="songs-grid">
+        {% for tab in tabs %}
+        <div class="song-card">
+            <div class="song-card-header">
+                <div class="song-card-title">{{ tab.title }}</div>
+                <form method="POST" action="{{ url_for('toggle_favorite', id=tab.id) }}" style="display:inline;">
+                    <button type="submit" class="star-btn {% if tab.id in current_user_fav_ids %}favorited{% endif %}" title="Добавить в избранное">
+                        <i class="fas fa-star"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="song-card-body">
+                <div class="song-artist">{% if tab.user %}By {{ tab.user.username }}{% else %}By {{ tab.artist }}{% endif %}</div>
+                
+                <div class="difficulty">
+                    <span class="difficulty-label">difficulty:</span>
+                    <div class="difficulty-stars">
+                        {% set d = tab.difficulty if tab.difficulty is not none else 3 %}
+                        {% for i in range(1,6) %}{% if i <= d %}<span style="color:#FFD700;">★</span>{% else %}<span style="color:#444;">★</span>{% endif %}{% endfor %}
+                    </div>
+                </div>
+                
+                <div class="song-length">
+                    <span class="length-label">song length:</span>
+                    <span class="length-badge {{ tab.length_class }}">{{ tab.length_label }}</span>
+                </div>
+                
+                <div class="song-actions">
+                    <a href="{{ url_for('view_tab', id=tab.id) }}" class="btn btn-view">
+                        <i class="fas fa-eye"></i> Open
+                    </a>
+                    {% if current_user and tab.user_id and current_user.id == tab.user_id %}
+                    <a href="{{ url_for('edit_tab', id=tab.id) }}" class="btn btn-edit">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <form id="delete-form-{{ tab.id }}" action="{{ url_for('delete_tab', id=tab.id) }}" method="POST" style="display: contents;">
+                        <button type="button" class="btn btn-delete" onclick="if(confirm('Удалить?')) { document.getElementById('delete-form-{{ tab.id }}').submit(); }" style="flex: 1;">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #999;">
+            <h3>Пока нет табов</h3>
+            <p>Будь первым, кто добавит табулатуру!</p>
+            <a href="{{ url_for('create_tab') }}" class="btn" style="background: #E99FCF; color: #1a1a1a; margin-top: 20px; display: inline-flex;">
+                <i class="fas fa-plus"></i> Добавить таб
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
